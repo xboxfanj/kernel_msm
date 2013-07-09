@@ -178,6 +178,12 @@ config INPUT_LID
 	tristate "Hall Sensor"
 	depends on INPUT
 
+config INPUT_MEDIATOR
+	bool "Event mediator"
+	help
+	  Clients can register to this mediator using a 
+	  simple 2-level priority to get input events
+
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"

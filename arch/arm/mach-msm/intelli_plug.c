@@ -20,19 +20,23 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/rq_stats.h>
+#include <linux/slab.h>
+#include <linux/input.h>
 
 //#define DEBUG_INTELLI_PLUG
 #undef DEBUG_INTELLI_PLUG
 
-#define INTELLI_PLUG_MAJOR_VERSION	1
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MAJOR_VERSION	2
+#define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_RATE		(10000)
-#define DEF_SAMPLING_MS			(200)
+#define DEF_SAMPLING_MS			(500)
+#define BUSY_SAMPLING_MS		(250)
 
-#define DUAL_CORE_PERSISTENCE		15
-#define TRI_CORE_PERSISTENCE		12
-#define QUAD_CORE_PERSISTENCE		9
+#define DUAL_CORE_PERSISTENCE		14
+#define TRI_CORE_PERSISTENCE		10
+#define QUAD_CORE_PERSISTENCE		6
+
+#define BUSY_PERSISTENCE		20
 
 #define RUN_QUEUE_THRESHOLD		38
 
@@ -48,7 +52,11 @@ module_param(intelli_plug_active, uint, 0644);
 static unsigned int eco_mode_active = 0;
 module_param(eco_mode_active, uint, 0644);
 
+static unsigned int sampling_time = 0;
+
 static unsigned int persist_count = 0;
+static unsigned int busy_persist_count = 0;
+
 static bool suspended = false;
 
 #define NR_FSHIFT	3
@@ -159,7 +167,7 @@ static unsigned int calculate_thread_stats(void)
 	return nr_run;
 }
 
-static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
+static void intelli_plug_work_fn(struct work_struct *work)
 {
 	unsigned int nr_run_stat;
 	unsigned int cpu_count = 0;
@@ -195,6 +203,18 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 					break;
 				}
 			}
+		}
+		/* it's busy.. lets help it a bit */
+		if (cpu_count > 2) {
+			if (busy_persist_count == 0) {
+				sampling_time = BUSY_SAMPLING_MS;
+				busy_persist_count = BUSY_PERSISTENCE;
+			}
+		} else {
+			if (busy_persist_count > 0)
+				busy_persist_count--;
+			else
+				sampling_time = DEF_SAMPLING_MS;
 		}
 
 		if (!suspended) {
@@ -263,7 +283,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 #endif
 	}
 	schedule_delayed_work_on(0, &intelli_plug_work,
-		msecs_to_jiffies(DEF_SAMPLING_MS));
+		msecs_to_jiffies(sampling_time));
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -284,7 +304,7 @@ static void intelli_plug_early_suspend(struct early_suspend *handler)
 	}
 }
 
-static void __cpuinit intelli_plug_late_resume(struct early_suspend *handler)
+static void intelli_plug_late_resume(struct early_suspend *handler)
 {
 	int num_of_active_cores;
 	int i;
@@ -316,21 +336,106 @@ static struct early_suspend intelli_plug_early_suspend_struct_driver = {
 };
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
+static void intelli_plug_input_event(struct input_handle *handle,
+		unsigned int type, unsigned int code, int value)
+{
+#ifdef DEBUG_INTELLI_PLUG
+	pr_info("intelli_plug touched!\n");
+#endif
+
+	cancel_delayed_work(&intelli_plug_work);
+
+	sampling_time = BUSY_SAMPLING_MS;
+	busy_persist_count = BUSY_PERSISTENCE;
+
+	schedule_delayed_work_on(0, &intelli_plug_work,
+		msecs_to_jiffies(sampling_time));
+}
+
+static int input_dev_filter(const char *input_dev_name)
+{
+	if (strstr(input_dev_name, "touchscreen") ||
+		strstr(input_dev_name, "sec_touchscreen") ||
+		strstr(input_dev_name, "touch_dev") ||
+		strstr(input_dev_name, "-keypad") ||
+		strstr(input_dev_name, "-nav") ||
+		strstr(input_dev_name, "-oj")) {
+		pr_info("touch dev: %s\n", input_dev_name);
+		return 0;
+	} else {
+		pr_info("touch dev: %s\n", input_dev_name);
+		return 1;
+	}
+}
+
+static int intelli_plug_input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int error;
+
+	if (input_dev_filter(dev->name))
+		return -ENODEV;
+
+	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = "intelliplug";
+
+	error = input_register_handle(handle);
+	if (error)
+		goto err2;
+
+	error = input_open_device(handle);
+	if (error)
+		goto err1;
+	pr_info("%s found and connected!\n", dev->name);
+	return 0;
+err1:
+	input_unregister_handle(handle);
+err2:
+	kfree(handle);
+	return error;
+}
+
+static void intelli_plug_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id intelli_plug_ids[] = {
+	{ .driver_info = 1 },
+	{ },
+};
+
+static struct input_handler intelli_plug_input_handler = {
+	.event          = intelli_plug_input_event,
+	.connect        = intelli_plug_input_connect,
+	.disconnect     = intelli_plug_input_disconnect,
+	.name           = "intelliplug_handler",
+	.id_table       = intelli_plug_ids,
+};
+
 int __init intelli_plug_init(void)
 {
-	/* We want all CPUs to do sampling nearly on same jiffy */
-	int delay = usecs_to_jiffies(DEF_SAMPLING_RATE);
-
-	if (num_online_cpus() > 1)
-		delay -= jiffies % delay;
+	int rc;
 
 	//pr_info("intelli_plug: scheduler delay is: %d\n", delay);
 	pr_info("intelli_plug: version %d.%d by faux123\n",
 		 INTELLI_PLUG_MAJOR_VERSION,
 		 INTELLI_PLUG_MINOR_VERSION);
 
+	sampling_time = DEF_SAMPLING_MS;
+
+	rc = input_register_handler(&intelli_plug_input_handler);
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
-	schedule_delayed_work_on(0, &intelli_plug_work, delay);
+	schedule_delayed_work_on(0, &intelli_plug_work,
+		msecs_to_jiffies(sampling_time));
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&intelli_plug_early_suspend_struct_driver);

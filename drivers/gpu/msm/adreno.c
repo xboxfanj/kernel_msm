@@ -79,6 +79,10 @@
 
 #define KGSL_LOG_LEVEL_DEFAULT 3
 
+#ifndef CONFIG_DEBUG_FS
+unsigned int kgsl_cff_dump_enable;
+#endif
+
 static const struct kgsl_functable adreno_functable;
 
 static void adreno_input_work(struct work_struct *work);

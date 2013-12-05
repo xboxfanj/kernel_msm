@@ -3889,9 +3889,9 @@ static void touch_early_suspend(struct early_suspend *h)
 {
 	struct lge_touch_data *ts =
 			container_of(h, struct lge_touch_data, early_suspend);
-
+#endif
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
- +#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+ #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
  	bool prevent_sleep = false;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
@@ -3918,15 +3918,18 @@ static void touch_early_suspend(struct early_suspend *h)
 	}
 #endif
 
-	#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
- 	if (prevent_sleep)
-		enable_irq_wake(ts->client->irq);
-	else
+	
 
 #ifdef CUST_G_TOUCH
 	if (ts->pdata->role->ghost_detection_enable) {
 		hrtimer_cancel(&hr_touch_trigger_timer);
 	}
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	if (prevent_sleep) {
+		enable_irq_wake(ts->client->irq);
+		release_all_ts_event(ts);
+	} else
+
 #endif
 
 	#endif

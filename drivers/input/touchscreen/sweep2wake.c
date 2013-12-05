@@ -64,6 +64,7 @@ MODULE_LICENSE("GPLv2");
 #define S2W_X_B1                400
 #define S2W_X_B2                700
 #define S2W_X_FINAL             250
+<<<<<<< HEAD
 #elif defined(CONFIG_MACH_APQ8064_MAKO)
 /* Mako aka Nexus 4 */
 #define S2W_Y_LIMIT             2350
@@ -79,6 +80,8 @@ MODULE_LICENSE("GPLv2");
 #define S2W_X_B1                500
 #define S2W_X_B2                700
 #define S2W_X_FINAL             450
+=======
+>>>>>>> 0bb6338... driver/input/touchscreen: add new s2w & dt2w implemenation from hammerhead
 #else
 /* defaults */
 #define S2W_Y_LIMIT             2350
@@ -95,9 +98,13 @@ static int touch_x = 0, touch_y = 0;
 static bool touch_x_called = false, touch_y_called = false;
 static bool scr_suspended = false, exec_count = true;
 static bool scr_on_touch = false, barrier[2] = {false, false};
+<<<<<<< HEAD
 #ifndef CONFIG_HAS_EARLYSUSPEND
 static struct notifier_block s2w_lcd_notif;
 #endif
+=======
+static struct notifier_block s2w_lcd_notif;
+>>>>>>> 0bb6338... driver/input/touchscreen: add new s2w & dt2w implemenation from hammerhead
 static struct input_dev * sweep2wake_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2w_input_wq;
@@ -158,7 +165,11 @@ static void detect_sweep2wake(int x, int y, bool st)
                 x, y, (single_touch) ? "true" : "false");
 #endif
 	//left->right
+<<<<<<< HEAD
 	if ((single_touch) && (scr_suspended == true) && (s2w_switch > 0 && !s2w_s2sonly)) {
+=======
+	if ((single_touch) && (scr_suspended == true) && (s2w_switch > 0)) {
+>>>>>>> 0bb6338... driver/input/touchscreen: add new s2w & dt2w implemenation from hammerhead
 		prevx = 0;
 		nextx = S2W_X_B1;
 		if ((barrier[0] == true) ||

@@ -3912,11 +3912,6 @@ static void touch_early_suspend(struct early_suspend *h)
 		return;
 	}
 
-#ifdef CUST_G_TOUCH
-	if (ts->pdata->role->ghost_detection_enable) {
-		resume_flag = 0;
-	}
-#endif
 
 	
 
@@ -3924,7 +3919,9 @@ static void touch_early_suspend(struct early_suspend *h)
 	if (ts->pdata->role->ghost_detection_enable) {
 		hrtimer_cancel(&hr_touch_trigger_timer);
 	}
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+
 	if (prevent_sleep) {
 		enable_irq_wake(ts->client->irq);
 		release_all_ts_event(ts);

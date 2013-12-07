@@ -95,13 +95,6 @@ static int touch_x = 0, touch_y = 0;
 static bool touch_x_called = false, touch_y_called = false;
 static bool scr_suspended = false, exec_count = true;
 static bool scr_on_touch = false, barrier[2] = {false, false};
-
-#ifndef CONFIG_HAS_EARLYSUSPEND
-static struct notifier_block s2w_lcd_notif;
-#endif
-
-static struct notifier_block s2w_lcd_notif;
-
 #ifndef CONFIG_HAS_EARLYSUSPEND
 static struct notifier_block s2w_lcd_notif;
 #endif
@@ -165,11 +158,7 @@ static void detect_sweep2wake(int x, int y, bool st)
                 x, y, (single_touch) ? "true" : "false");
 #endif
 	//left->right
-
 	if ((single_touch) && (scr_suspended == true) && (s2w_switch > 0 && !s2w_s2sonly)) {
-
-	if ((single_touch) && (scr_suspended == true) && (s2w_switch > 0)) {
-
 		prevx = 0;
 		nextx = S2W_X_B1;
 		if ((barrier[0] == true) ||

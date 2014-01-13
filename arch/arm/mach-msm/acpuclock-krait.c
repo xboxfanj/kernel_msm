@@ -45,6 +45,12 @@
 #define PRI_SRC_SEL_HFPLL	1
 #define PRI_SRC_SEL_HFPLL_DIV2	2
 
+#ifdef CONFIG_LOW_CPUCLOCKS
+#define FREQ_TABLE_SIZE		39
+#else
+#define FREQ_TABLE_SIZE		35
+#endif
+
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
@@ -913,7 +919,62 @@ static void __init bus_init(const struct l2_level *l2_level)
 }
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
+
+#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
+
+#define MAX_VDD 1450
+#define MIN_VDD 600
+
+ssize_t acpuclk_get_vdd_levels_str(char *buf)
+{
+
+	int i, len = 0;
+
+	if (buf) {
+		for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
+            if (drv.acpu_freq_tbl[i].use_for_scaling) {
+                len += sprintf(buf + len, "%lumhz: %i mV\n",
+                           drv.acpu_freq_tbl[i].speed.khz/1000,
+                           drv.acpu_freq_tbl[i].vdd_core/1000 );
+            }
+		}
+	}
+	return len;
+}
+
+ssize_t acpuclk_set_vdd(char *buf)
+{
+	unsigned int cur_volt;
+	char count[10];
+	int i;
+    int ret = 0;
+
+	if (!buf)
+		return -EINVAL;
+
+	for (i = 0; i < drv.acpu_freq_tbl[i].speed.khz; i++) {
+        if (drv.acpu_freq_tbl[i].use_for_scaling) {
+            ret = sscanf(buf, "%d", &cur_volt);
+
+            if (ret != 1)
+                return -EINVAL;
+
+            if (cur_volt > MAX_VDD) {
+                cur_volt = MAX_VDD;
+            } else if (cur_volt < MIN_VDD) {
+                cur_volt = MIN_VDD;
+            }
+
+            drv.acpu_freq_tbl[i].vdd_core = cur_volt*1000;
+
+            ret = sscanf(buf, "%s", count);
+            buf += (strlen(count)+1);
+        }
+	}
+	return ret;
+}
+#endif
 
 #ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
 

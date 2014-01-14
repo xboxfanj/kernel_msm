@@ -976,61 +976,6 @@ ssize_t acpuclk_set_vdd(char *buf)
 }
 #endif
 
-#ifdef CONFIG_MSM_CPU_VOLTAGE_CONTROL
-
-#define MAX_VDD 1450
-#define MIN_VDD 600
-
-ssize_t acpuclk_get_vdd_levels_str(char *buf)
-{
-
-	int i, len = 0;
-
-	if (buf) {
-		for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
-            if (drv.acpu_freq_tbl[i].use_for_scaling) {
-                len += sprintf(buf + len, "%lumhz: %i mV\n",
-                           drv.acpu_freq_tbl[i].speed.khz/1000,
-                           drv.acpu_freq_tbl[i].vdd_core/1000 );
-            }
-		}
-	}
-	return len;
-}
-
-ssize_t acpuclk_set_vdd(char *buf)
-{
-	unsigned int cur_volt;
-	char count[10];
-	int i;
-    int ret = 0;
-
-	if (!buf)
-		return -EINVAL;
-
-	for (i = 0; i < drv.acpu_freq_tbl[i].speed.khz; i++) {
-        if (drv.acpu_freq_tbl[i].use_for_scaling) {
-            ret = sscanf(buf, "%d", &cur_volt);
-
-            if (ret != 1)
-                return -EINVAL;
-
-            if (cur_volt > MAX_VDD) {
-                cur_volt = MAX_VDD;
-            } else if (cur_volt < MIN_VDD) {
-                cur_volt = MIN_VDD;
-            }
-
-            drv.acpu_freq_tbl[i].vdd_core = cur_volt*1000;
-
-            ret = sscanf(buf, "%s", count);
-            buf += (strlen(count)+1);
-        }
-	}
-	return ret;
-}
-#endif
-
 static void __init cpufreq_table_init(void)
 {
 	int cpu;

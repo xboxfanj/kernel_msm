@@ -517,7 +517,8 @@ limCheckRxRSNIeMatch(tpAniSirGlobal pMac, tDot11fIERSN rxRSNIe,tpPESession pSess
     theyRequirePMF = (rxRSNIe.RSN_Cap[0] >> 6) & 0x1;
     theyArePMFCapable = (rxRSNIe.RSN_Cap[0] >> 7) & 0x1;
 
-    if ((theyRequirePMF && !weArePMFCapable) || (weRequirePMF && !theyArePMFCapable))
+    if ((theyRequirePMF && theyArePMFCapable && !weArePMFCapable) ||
+        (weRequirePMF && !theyArePMFCapable))
     {
         limLog(pMac, LOG1, FL("Association fail, robust management frames policy violation"));
         return eSIR_MAC_ROBUST_MGMT_FRAMES_POLICY_VIOLATION;
@@ -702,7 +703,11 @@ limCleanupRxPath(tpAniSirGlobal pMac, tpDphHashNode pStaDs,tpPESession psessionE
         pMac->lim.gLastBeaconDtimPeriod = 0;
 
 #ifdef FEATURE_WLAN_CCX
+#ifdef FEATURE_WLAN_CCX_UPLOAD
+        limSendSmeTsmIEInd(pMac, psessionEntry, 0, 0, 0);
+#else
         limDeactivateAndChangeTimer(pMac,eLIM_TSM_TIMER);
+#endif /* FEATURE_WLAN_CCX_UPLOAD */
 #endif
 
         /**
@@ -1825,7 +1830,7 @@ limPopulatePeerRateSet(tpAniSirGlobal pMac,
     isArate = 0;
 
     /* copy operational rate set from psessionEntry */
-    if ( psessionEntry->rateSet.numRates < SIR_MAC_RATESET_EID_MAX )
+    if ( psessionEntry->rateSet.numRates <= SIR_MAC_RATESET_EID_MAX )
     {
         palCopyMemory(pMac->hHdd,(tANI_U8 *)tempRateSet.rate,(tANI_U8*)(psessionEntry->rateSet.rate), psessionEntry->rateSet.numRates);
         tempRateSet.numRates = psessionEntry->rateSet.numRates;
@@ -1838,7 +1843,7 @@ limPopulatePeerRateSet(tpAniSirGlobal pMac,
     if (psessionEntry->dot11mode == WNI_CFG_DOT11_MODE_11G)
     {
 
-        if (psessionEntry->extRateSet.numRates < SIR_MAC_RATESET_EID_MAX)
+        if (psessionEntry->extRateSet.numRates <= SIR_MAC_RATESET_EID_MAX)
         {
             palCopyMemory(pMac->hHdd,(tANI_U8 *)tempRateSet2.rate, (tANI_U8*)(psessionEntry->extRateSet.rate), psessionEntry->extRateSet.numRates);
             tempRateSet2.numRates = psessionEntry->extRateSet.numRates;
@@ -1850,7 +1855,7 @@ limPopulatePeerRateSet(tpAniSirGlobal pMac,
     }
     else
         tempRateSet2.numRates = 0;
-    if ((tempRateSet.numRates + tempRateSet2.numRates) > 12)
+    if ((tempRateSet.numRates + tempRateSet2.numRates) > SIR_MAC_RATESET_EID_MAX)
     {
         //we are in big trouble
         limLog(pMac, LOGP, FL("more than 12 rates in CFG"));
@@ -2659,7 +2664,7 @@ tSirRetStatus limAddFTStaSelf(tpAniSirGlobal pMac, tANI_U16 assocId, tpPESession
 
 
 #if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-    limLog( pMac, LOGE, FL( "Sending SIR_HAL_ADD_STA_REQ... (aid %d)" ), pAddStaParams->assocId);
+    limLog( pMac, LOG1, FL( "Sending SIR_HAL_ADD_STA_REQ... (aid %d)" ), pAddStaParams->assocId);
 #endif
     MTRACE(macTraceMsgTx(pMac, psessionEntry->peSessionId, msgQ.type));
 
@@ -4352,3 +4357,49 @@ void limSendSmeUnprotectedMgmtFrameInd(
     return;
 }
 #endif
+
+#if defined(FEATURE_WLAN_CCX) && defined(FEATURE_WLAN_CCX_UPLOAD)
+/** -------------------------------------------------------------
+\fn     limSendSmeTsmIEInd
+\brief  Forwards the TSM IE information to SME.
+\param  tpAniSirGlobal    pMac
+\param  psessionEntry - PE session context
+\param  tid - traffic id
+\param  state - tsm state (enabled/disabled)
+\param  measurementInterval - measurement interval
+\return none
+  -------------------------------------------------------------*/
+void limSendSmeTsmIEInd(tpAniSirGlobal pMac, tpPESession psessionEntry,
+                            tANI_U8 tid, tANI_U8 state, tANI_U16 measInterval)
+{
+    tSirMsgQ         mmhMsg;
+    tpSirSmeTsmIEInd pSirSmeTsmIeInd = NULL;
+
+    if (!pMac || !psessionEntry)
+    {
+        return;
+    }
+    pSirSmeTsmIeInd = vos_mem_malloc(sizeof(tSirSmeTsmIEInd));
+    if (NULL == pSirSmeTsmIeInd)
+    {
+        limLog(pMac, LOGP,
+               FL("AllocateMemory failed for tSirSmeTsmIEInd"));
+        return;
+    }
+    vos_mem_set((void*)pSirSmeTsmIeInd, sizeof(tSirSmeTsmIEInd), 0);
+
+    pSirSmeTsmIeInd->sessionId = psessionEntry->smeSessionId;
+    pSirSmeTsmIeInd->tsmIe.tsid = tid;
+    pSirSmeTsmIeInd->tsmIe.state= state;
+    pSirSmeTsmIeInd->tsmIe.msmt_interval= measInterval;
+
+    mmhMsg.type = eWNI_SME_TSM_IE_IND;
+    mmhMsg.bodyptr = pSirSmeTsmIeInd;
+    mmhMsg.bodyval = 0;
+
+    limSysProcessMmhMsgApi(pMac, &mmhMsg, ePROT);
+    return;
+}
+#endif /* FEATURE_WLAN_CCX && FEATURE_WLAN_CCX_UPLOAD */
+
+

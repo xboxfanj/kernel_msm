@@ -15,6 +15,8 @@
  *  r10 = thread_info structure
  *  lr  = failure return
  */
+#include <linux/init.h>
+
 #include <asm/thread_info.h>
 #include <asm/vfpmacros.h>
 #include "../kernel/entry-header.S"

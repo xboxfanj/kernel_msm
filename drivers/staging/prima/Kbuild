@@ -11,6 +11,8 @@ ifeq ($(KERNEL_BUILD),1)
 	# Need to explicitly define for Kernel-based builds
 	MODNAME := wlan
 	WLAN_ROOT := drivers/staging/prima
+	#Flag to enable TDLS feature
+	CONFIG_QCOM_TDLS := y
 endif
 
 ifeq ($(KERNEL_BUILD),0)
@@ -590,6 +592,11 @@ endif
 
 # enable the MAC Address auto-generation feature
 CDEFINES += -DWLAN_AUTOGEN_MACADDR_FEATURE
+
+ifneq (, $(filter msm8960, $(BOARD_PLATFORM)))
+EXTRA_CFLAGS += -march=armv7-a
+CDEFINES += -DMSM_PLATFORM_8960
+endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_11W),y)
 CDEFINES += -DWLAN_FEATURE_11W

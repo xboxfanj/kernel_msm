@@ -33,6 +33,6 @@ config QCOM_VOWIFI_11R
 
 config QCOM_TDLS
 	bool "Enable TDLS feature"
-	default y
+	default n
 
 endif # PRIMA_WLAN

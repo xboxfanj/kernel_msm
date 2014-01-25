@@ -87,7 +87,7 @@
 #include "csrApi.h"
 #include "sme_Api.h"
 // SAP Internal API header file
-#include "sapInternal.h" 
+#include "sapInternal.h"
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -112,7 +112,7 @@
 
 /*----------------------------------------------------------------------------
  * Externalized Function Definitions
-* -------------------------------------------------------------------------*/
+ * -------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------
  * Function Declarations and Documentation
@@ -228,12 +228,13 @@ WLANSAP_ScanCallback
       psapContext->channel = operChannel;
     }
 
-    wlan_sap_select_cbmode(pTempHddCtx, psapContext->csrRoamProfile.phyMode,
-                           psapContext->channel);
+    sme_SelectCBMode(halHandle,
+          sapConvertSapPhyModeToCsrPhyMode(psapContext->csrRoamProfile.phyMode),
+          psapContext->channel);
 #ifdef SOFTAP_CHANNEL_RANGE
     if(psapContext->channelList != NULL)
     {
-        /* Always free up the memory for channel selection whatever 
+        /* Always free up the memory for channel selection whatever
          * the result */
         vos_mem_free(psapContext->channelList);
         psapContext->channelList = NULL;
@@ -463,24 +464,19 @@ WLANSAP_RoamCallback
                 vosStatus = sapSignalHDDevent( sapContext, pCsrRoamInfo, eSAP_STA_ASSOC_IND, (v_PVOID_t)eSAP_STATUS_SUCCESS);
                 if(!VOS_IS_STATUS_SUCCESS(vosStatus))
                 {
-                   VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR, 
-                      "In %s, CSR roamResult = (%d) MAC"
-                      "(%02X-%02X-%02X-%02X-%02X-%02X) fail",
-                      __func__, roamResult, pCsrRoamInfo->peerMac[0],
-                      pCsrRoamInfo->peerMac[1], pCsrRoamInfo->peerMac[2],
-                      pCsrRoamInfo->peerMac[3], pCsrRoamInfo->peerMac[4],
-                      pCsrRoamInfo->peerMac[5]);
+                   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+                             "In %s, CSR roamResult = (%d) MAC ("
+                             MAC_ADDRESS_STR") fail", __func__, roamResult,
+                             MAC_ADDR_ARRAY(pCsrRoamInfo->peerMac));
                     halStatus = eHAL_STATUS_FAILURE;
                 }
             }
             else
             {
-                VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_WARN, 
-                   "In %s, CSR roamResult = (%d) MAC"
-                   "(%02X-%02X-%02X-%02X-%02X-%02X) not allowed",
-                   __func__, roamResult, pCsrRoamInfo->peerMac[0],
-                   pCsrRoamInfo->peerMac[1], pCsrRoamInfo->peerMac[2],
-                   pCsrRoamInfo->peerMac[3], pCsrRoamInfo->peerMac[4], pCsrRoamInfo->peerMac[5]);
+                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_WARN,
+                          "In %s, CSR roamResult = (%d) MAC ("
+                          MAC_ADDRESS_STR") not allowed", __func__, roamResult,
+                          MAC_ADDR_ARRAY(pCsrRoamInfo->peerMac));
                 halStatus = eHAL_STATUS_FAILURE;
             } 
 

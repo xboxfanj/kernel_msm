@@ -68,6 +68,7 @@ typedef enum
 #define LIM_STA_ID_MASK                        0x00FF
 #define LIM_AID_MASK                              0xC000
 #define LIM_SPECTRUM_MANAGEMENT_BIT_MASK          0x0100
+#define LIM_RRM_BIT_MASK                          0x1000
 #if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_CCX) || defined(FEATURE_WLAN_LFR)
 #define LIM_MAX_REASSOC_RETRY_LIMIT            2
 #endif
@@ -349,7 +350,7 @@ tSirRetStatus limPostSMStateUpdate(tpAniSirGlobal pMac,
 void limDeleteStaContext(tpAniSirGlobal pMac, tpSirMsgQ limMsg);
 void limProcessAddBaInd(tpAniSirGlobal pMac, tpSirMsgQ limMsg);
 void limDeleteBASessions(tpAniSirGlobal pMac, tpPESession pSessionEntry, tANI_U32 baDirection);
-void limDelAllBASessionsBtc(tpAniSirGlobal pMac);
+void limDelPerBssBASessionsBtc(tpAniSirGlobal pMac);
 void limDelAllBASessions(tpAniSirGlobal pMac);
 void limDeleteDialogueTokenList(tpAniSirGlobal pMac);
 tSirRetStatus limSearchAndDeleteDialogueToken(tpAniSirGlobal pMac, tANI_U8 token, tANI_U16 assocId, tANI_U16 tid);
@@ -461,6 +462,12 @@ typedef enum
     WLAN_PE_DIAG_HAL_ADDBA_REQ_EVENT,
     WLAN_PE_DIAG_HAL_ADDBA_RSP_EVENT,
     WLAN_PE_DIAG_HAL_DELBA_IND_EVENT,
+    WLAN_PE_DIAG_HB_FAILURE_TIMEOUT,
+    WLAN_PE_DIAG_PRE_AUTH_REQ_EVENT,
+    WLAN_PE_DIAG_PRE_AUTH_RSP_EVENT,
+    WLAN_PE_DIAG_PREAUTH_DONE,
+    WLAN_PE_DIAG_REASSOCIATING,
+    WLAN_PE_DIAG_CONNECTED,
 }WLAN_PE_DIAG_EVENT_TYPE;
 
 void limDiagEventReport(tpAniSirGlobal pMac, tANI_U16 eventType, tpPESession pSessionEntry, tANI_U16 status, tANI_U16 reasonCode);

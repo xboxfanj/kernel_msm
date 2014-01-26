@@ -18,27 +18,6 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-
 
 /************************************************************************
    smeTrace.c
@@ -197,7 +176,7 @@ static tANI_U8* smeTraceGetCommandString( tANI_U32 command )
             break;
     }
 }
-static void smeTraceDump(tpAniSirGlobal pMac, tpvosTraceRecord pRecord,
+static void smeTraceDump(tpAniSirGlobal pMac, tpTraceRecord pRecord,
                                                             tANI_U16 recIndex)
 {
     if (TRACE_CODE_SME_COMMAND == pRecord->code)
@@ -216,6 +195,6 @@ static void smeTraceDump(tpAniSirGlobal pMac, tpvosTraceRecord pRecord,
 
 void smeTraceInit(tpAniSirGlobal pMac)
 {
-    vosTraceRegister(VOS_MODULE_ID_SME, (tpvosTraceCb)&smeTraceDump);
+    macTraceRegister(pMac,  VOS_MODULE_ID_SME, smeTraceDump);
 }
 #endif

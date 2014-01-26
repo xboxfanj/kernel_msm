@@ -95,10 +95,6 @@
    ((extRssi < rssi)?eANI_BOOLEAN_TRUE:eANI_BOOLEAN_FALSE) \
 )
 
-#ifdef FEATURE_WLAN_CH_AVOID
-extern safeChannelType safeChannels[];
-#endif /* FEATURE_WLAN_CH_AVOID */
-
 /*==========================================================================
   FUNCTION    sapCleanupChannelList
 
@@ -221,22 +217,10 @@ int sapSetPreferredChannel(tANI_U8* ptr)
     }
 
     /*getting the first argument ie the number of channels*/
-    if (sscanf(param, "%d ", &tempInt) != 1)
-    {
-        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                   "%s: Cannot get number of channels from input", __func__);
-        return -EINVAL;
-    }
+    sscanf(param, "%d ", &tempInt);
 
     VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH, 
-               "%s: Number of channel added are: %d", __func__, tempInt);
-
-    if (tempInt <= 0 || tempInt > 255)
-    {
-        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                   "%s: Invalid Number of channel received", __func__);
-        return -EINVAL;
-    }
+               "Number of channel added are: %d", tempInt);
 
     /*allocating space for the desired number of channels*/
     pSapCtx->SapChnlList.channelList = (v_U8_t *)vos_mem_malloc(tempInt);
@@ -273,26 +257,12 @@ int sapSetPreferredChannel(tANI_U8* ptr)
             return -EINVAL;
         }
 
-        if (sscanf(param, "%d ", &tempInt) != 1)
-        {
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                       "%s: Cannot read channel number", __func__);
-            sapCleanupChannelList();
-            return -EINVAL;
-        }
-        if (tempInt < 0 || tempInt > 255)
-        {
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                       "%s: Invalid channel number received", __func__);
-            sapCleanupChannelList();
-            return -EINVAL;
-        }
-
+        sscanf(param, "%d ", &tempInt);
         pSapCtx->SapChnlList.channelList[j] = tempInt;
 
         VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH, 
-                   "%s: Channel %d added to preferred channel list",
-                   __func__, pSapCtx->SapChnlList.channelList[j] );
+                   "Channel %d added to preferred channel list",
+                   pSapCtx->SapChnlList.channelList[j] );
 
     }
 
@@ -403,10 +373,6 @@ v_BOOL_t sapChanSelInit(tHalHandle halHandle, tSapChSelSpectInfo *pSpectInfoPara
     v_U8_t *pChans = NULL;
     v_U16_t channelnum = 0;
     tpAniSirGlobal pMac = PMAC_STRUCT(halHandle);
-#ifdef FEATURE_WLAN_CH_AVOID
-    v_U16_t i;
-    v_BOOL_t chSafe = VOS_TRUE;
-#endif /* FEATURE_WLAN_CH_AVOID */
 
     VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH, "In %s", __func__);
 
@@ -431,40 +397,14 @@ v_BOOL_t sapChanSelInit(tHalHandle halHandle, tSapChSelSpectInfo *pSpectInfoPara
 
     // Fill the channel number in the spectrum in the operating freq band
     for (channelnum = 0; channelnum < pSpectInfoParams->numSpectChans; channelnum++) {
-#ifdef FEATURE_WLAN_CH_AVOID
-        chSafe = VOS_TRUE;
-        for(i = 0; i < NUM_20MHZ_RF_CHANNELS; i++)
-        {
-            if((safeChannels[i].channelNumber == *pChans) &&
-               (VOS_FALSE == safeChannels[i].isSafe))
-            {
-               VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
-                         "%s : CH %d is not safe", __func__, *pChans);
-               chSafe = VOS_FALSE;
-               break;
-            }
-        }
-#endif /* FEATURE_WLAN_CH_AVOID */
 
         if(*pChans == 14 ) //OFDM rates are not supported on channel 14
             continue;
-#ifdef FEATURE_WLAN_CH_AVOID
-        if (VOS_TRUE == chSafe)
-        {
-#endif /* FEATURE_WLAN_CH_AVOID */
-           VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_DEBUG,
-                     "%s : Available Ch %d",
-                     __func__, *pChans);
-           pSpectCh->chNum = *pChans;
-           pSpectCh->valid = eSAP_TRUE;
-           // Initialise for all channels
-           pSpectCh->rssiAgr = SOFTAP_MIN_RSSI;
-           // Initialise 20MHz for all the Channels
-           pSpectCh->channelWidth = SOFTAP_HT20_CHANNELWIDTH;
-           pSpectCh++;
-#ifdef FEATURE_WLAN_CH_AVOID
-        }
-#endif /* FEATURE_WLAN_CH_AVOID */
+        pSpectCh->chNum = *pChans;
+        pSpectCh->valid = eSAP_TRUE;
+        pSpectCh->rssiAgr = SOFTAP_MIN_RSSI;// Initialise for all channels
+        pSpectCh->channelWidth = SOFTAP_HT20_CHANNELWIDTH; // Initialise 20MHz for all the Channels 
+        pSpectCh++;
         pChans++;
     }
     return eSAP_TRUE;
@@ -1302,8 +1242,8 @@ void sapComputeSpectWeight( tSapChSelSpectInfo* pSpectInfoParams,
     tSirProbeRespBeacon *pBeaconStruct;
     tpAniSirGlobal  pMac = (tpAniSirGlobal) halHandle;
 
-    pBeaconStruct = vos_mem_malloc(sizeof(tSirProbeRespBeacon));
-    if ( NULL == pBeaconStruct )
+    if(eHAL_STATUS_SUCCESS != palAllocateMemory(pMac->hHdd, 
+                                                (void **)&pBeaconStruct, sizeof(tSirProbeRespBeacon)))
     {
         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                    "Unable to allocate memory in sapComputeSpectWeight\n");
@@ -1329,8 +1269,7 @@ void sapComputeSpectWeight( tSapChSelSpectInfo* pSpectInfoParams,
         if (pScanResult->BssDescriptor.ieFields != NULL)
         {
             ieLen = (pScanResult->BssDescriptor.length + sizeof(tANI_U16) + sizeof(tANI_U32) - sizeof(tSirBssDescription));
-            vos_mem_set((tANI_U8 *) pBeaconStruct, sizeof(tSirProbeRespBeacon), 0);
-
+            palZeroMemory(pMac->hHdd, (tANI_U8 *) pBeaconStruct, sizeof(tSirProbeRespBeacon));
             if ((sirParseBeaconIE(pMac, pBeaconStruct,(tANI_U8 *)( pScanResult->BssDescriptor.ieFields), ieLen)) == eSIR_SUCCESS)
             {
                 if (pBeaconStruct->HTCaps.present && pBeaconStruct->HTInfo.present)
@@ -1620,7 +1559,7 @@ void sapComputeSpectWeight( tSapChSelSpectInfo* pSpectInfoParams,
         //------ Debug Info ------
         pSpectCh++;
     }
-    vos_mem_free(pBeaconStruct);
+    palFreeMemory(pMac->hHdd, pBeaconStruct);
 }
 
 /*==========================================================================

@@ -170,7 +170,7 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
    msg.type = pMb->type;
    msg.bodyval = 0;
 
-   WDALOG3(wdaLog(pMac, LOG3, FL("msgType %d, msgLen %d" ),
+   WDALOG3(wdaLog(pMac, LOG3, FL("msgType %d, msgLen %d\n" ),
         pMb->type, pMb->msgLen));
 
    // copy the message from host buffer to firmware buffer
@@ -179,14 +179,13 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
    // host buffer
 
    // second parameter, 'wait option', to palAllocateMemory is ignored on Windows
-   pMbLocal = vos_mem_malloc(pMb->msgLen);
-   if ( NULL == pMbLocal )
+   if( eHAL_STATUS_SUCCESS != palAllocateMemory( pMac->hHdd, (void **)&pMbLocal, pMb->msgLen))
    {
-      WDALOGE( wdaLog(pMac, LOGE, FL("Buffer Allocation failed!")));
+      WDALOGE( wdaLog(pMac, LOGE, FL("Buffer Allocation failed!\n")));
       return eSIR_FAILURE;
    }
 
-   vos_mem_copy((void *)pMbLocal, (void *)pMb, pMb->msgLen);
+   palCopyMemory(pMac, (void *)pMbLocal, (void *)pMb, pMb->msgLen);
    msg.bodyptr = pMbLocal;
 
    switch (msg.type & HAL_MMH_MB_MSG_TYPE_MASK)
@@ -208,19 +207,21 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
       break;
 
    case SIR_PTT_MSG_TYPES_BEGIN:
-      WDALOGW( wdaLog(pMac, LOGW, FL("%s:%d: message type = 0x%X"),
-               __func__, __LINE__, msg.type));
-      vos_mem_free(msg.bodyptr);
       break;
 
 
    default:
       WDALOGW( wdaLog(pMac, LOGW, FL("Unknown message type = "
-             "0x%X"),
+             "0x%X\n"),
              msg.type));
 
       // Release the memory.
-      vos_mem_free(msg.bodyptr);
+      if (palFreeMemory( pMac->hHdd, (void*)(msg.bodyptr))
+            != eHAL_STATUS_SUCCESS)
+      {
+         WDALOGE( wdaLog(pMac, LOGE, FL("Buffer Allocation failed!\n")));
+         return eSIR_FAILURE;
+      }
       break;
    }
 
@@ -247,7 +248,7 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac)
       VOS_ASSERT(0);
       return eSYSTEM_UNKNOWN_ROLE;
    }
-   WDALOG1( wdaLog(pMac, LOG1, FL(" returning  %d role"),
+   WDALOG1( wdaLog(pMac, LOG1, FL(" returning  %d role\n"),
              wdaContext->wdaGlobalSystemRole));
    return  wdaContext->wdaGlobalSystemRole;
 }

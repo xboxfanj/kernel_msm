@@ -397,10 +397,6 @@ VOS_STATUS vos_open( v_CONTEXT_t *pVosContext, v_SIZE_t hddContextSize )
      VOS_ASSERT(0);
      goto err_nv_close;
    }
-/* call crda before sme_Open which will read NV and store the default country code */
-   wlan_hdd_get_crda_regd_entry(
-      ((hdd_context_t*)(gpVosContext->pHDDContext))->wiphy,
-      ((hdd_context_t*)(gpVosContext->pHDDContext))->cfg_ini);
 
    /* Now proceed to open the SME */
    vStatus = sme_Open(gpVosContext->pMACContext);
@@ -553,6 +549,10 @@ VOS_STATUS vos_preStart( v_CONTEXT_t vosContext )
          VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
            "%s: WDA_preStart reporting other error", __func__);
       }
+      VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+           "%s: Test MC thread by posting a probe message to SYS", __func__);
+      wlan_sys_probe();
+
       macStop(gpVosContext->pMACContext, HAL_STOP_TYPE_SYS_DEEP_SLEEP);
       ccmStop(gpVosContext->pMACContext);
       VOS_ASSERT( 0 );
@@ -808,6 +808,9 @@ VOS_STATUS vos_stop( v_CONTEXT_t vosContext )
           VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
            "%s: WDA_stop reporting other error", __func__ );
        }
+       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+           "%s: Test MC thread by posting a probe message to SYS", __func__);
+       wlan_sys_probe();
        WDA_setNeedShutdown(vosContext);
     }
   }
@@ -1902,7 +1905,7 @@ v_BOOL_t vos_is_apps_power_collapse_allowed(void* pHddCtx)
   return hdd_is_apps_power_collapse_allowed((hdd_context_t*) pHddCtx);
 }
 
-void vos_abort_mac_scan(void)
+void vos_abort_mac_scan(v_U8_t sessionId)
 {
     hdd_context_t *pHddCtx = NULL;
     v_CONTEXT_t pVosContext        = NULL;
@@ -1921,10 +1924,9 @@ void vos_abort_mac_scan(void)
        return;
     }
 
-    hdd_abort_mac_scan(pHddCtx);
+    hdd_abort_mac_scan(pHddCtx, sessionId);
     return;
 }
-
 /*---------------------------------------------------------------------------
 
   \brief vos_shutdown() - shutdown VOS
@@ -1982,6 +1984,14 @@ VOS_STATUS vos_shutdown(v_CONTEXT_t vosContext)
   }
 
   ((pVosContextType)vosContext)->pMACContext = NULL;
+
+  vosStatus = vos_nv_close();
+  if (!VOS_IS_STATUS_SUCCESS(vosStatus))
+  {
+     VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+         "%s: Failed to close NV", __func__);
+     VOS_ASSERT( VOS_IS_STATUS_SUCCESS( vosStatus ) );
+  }
 
   vosStatus = sysClose( vosContext );
   if (!VOS_IS_STATUS_SUCCESS(vosStatus))

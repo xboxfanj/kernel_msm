@@ -41,6 +41,14 @@
 #include "./DS4/RefCode_PDTScan.h"
 struct i2c_client *ds4_i2c_client;
 static int f54_fullrawcap_mode = 0;
+
+#if defined(CONFIG_MACH_APQ8064_GK_KR) || defined(CONFIG_MACH_APQ8064_GKATT) || defined(CONFIG_MACH_APQ8064_GVDCM) || defined(CONFIG_MACH_APQ8064_J1D) || defined(CONFIG_MACH_APQ8064_J1KD)
+// do nothing
+#else
+#define G_ONLY
+#endif
+
+
 #endif
 
 struct lge_touch_data
@@ -140,6 +148,13 @@ static void release_all_ts_event(struct lge_touch_data *ts);
 
 int trigger_baseline = 0;
 int ts_charger_plug = 0;
+int ts_charger_type = 0;
+#ifdef G_ONLY
+static void safety_reset(struct lge_touch_data *ts);
+static int touch_ic_init(struct lge_touch_data *ts);
+int cur_hopping_idx = 3;
+extern int cns_en;
+#endif
 static struct hrtimer hr_touch_trigger_timer;
 #define MS_TO_NS(x)	(x * 1E6L)
 
@@ -156,9 +171,13 @@ static enum hrtimer_restart touch_trigger_timer_handler(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
-void trigger_baseline_state_machine(int plug_in)
+void trigger_baseline_state_machine(int plug_in, int type)
 {
-	u8 buf;
+	u8 buf=0;
+#ifdef G_ONLY
+	extern u8 hopping;
+#endif
+
 
 	if (touch_test_dev && touch_test_dev->pdata->role->ghost_detection_enable) {
 
@@ -169,16 +188,53 @@ void trigger_baseline_state_machine(int plug_in)
 					touch_i2c_read(touch_test_dev->client, 0x50, 1, &buf);
 					buf = buf & 0xDF;
 					touch_i2c_write_byte(touch_test_dev->client, 0x50, buf);
+#ifdef G_ONLY
+					cns_en = 0;
+					if(cur_hopping_idx != 3) cur_hopping_idx = 3;
+					safety_reset(touch_test_dev);
+					queue_delayed_work(touch_wq, &touch_test_dev->work_init,
+								msecs_to_jiffies(touch_test_dev->pdata->role->booting_delay));
+					TOUCH_INFO_MSG("cur_hopping_idx [ %s ] = %x\n", __func__, cur_hopping_idx);
+#endif
 				} else if(plug_in ==1){
 					touch_i2c_read(touch_test_dev->client, 0x50, 1, &buf);
 					buf = buf | 0x20;
 					touch_i2c_write_byte(touch_test_dev->client, 0x50, buf);
+#ifdef G_ONLY
+					touch_i2c_write_byte(touch_test_dev->client, 0xFF, 0x01);
+					touch_i2c_read(touch_test_dev->client, 0x0D, 1, &buf);
+
+					if( buf >= 1 ) {
+						switch(type) {
+							case 0:
+							case 1:
+								if( cur_hopping_idx != 4 ) {
+									//touch_i2c_write_byte(touch_test_dev->client, 0x04, 0x84);
+									cur_hopping_idx = 4;
+									hopping = 1;
+									TOUCH_INFO_MSG("cur_hopping_idx [ %s ] = %x\n", __func__, cur_hopping_idx);
+								} else {
+									hopping = 0;
+								}
+								break;
+							default:
+								break;
+						}
+					}
+					touch_i2c_write_byte(touch_test_dev->client, 0xFF, 0x00);
+#endif
 				}
 			}
-			TOUCH_INFO_MSG(" trigger_baseline_state_machine = %d \n", plug_in);
+
+			ts_charger_type = type;
+			TOUCH_INFO_MSG(" trigger_baseline_state_machine = %d type = %d \n", plug_in, type);
 			ts_charger_plug = plug_in;
 
+#ifdef G_ONLY
+			if( trigger_baseline==0 && plug_in ==1){
+#else
 			if( trigger_baseline==0 ){
+#endif
 				trigger_baseline = 1;
 
 				hrtimer_start(&hr_touch_trigger_timer, ktime_set(0, MS_TO_NS(1000)), HRTIMER_MODE_REL);
@@ -190,6 +246,9 @@ void trigger_baseline_state_machine(int plug_in)
 int ghost_detect_solution(struct lge_touch_data *ts)
 {
 	extern u8 pressure_zero;
+#ifdef G_ONLY
+	extern u8 hopping;
+#endif
 	int first_int_detection = 0;
 	int cnt = 0, id =0;
 
@@ -229,7 +288,12 @@ int ghost_detect_solution(struct lge_touch_data *ts)
 		TOUCH_INFO_MSG("pressure\n");
 		ghost_detection = true;
 	}
-
+#ifdef G_ONLY
+	/*if(hopping == 1) {
+		TOUCH_INFO_MSG("hopping\n");
+		ghost_detection = true;
+	}*/
+#endif
 	if (ts_charger_plug) {
 		if( (ts->pdata->role->ta_debouncing_finger_num  <= ts->ts_data.total_num) && ( ta_debouncing_count < ts->pdata->role->ta_debouncing_count)) {
 			ta_debouncing_count ++;
@@ -3513,11 +3577,11 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 	/* accuracy solution */
 	if (ts->pdata->role->accuracy_filter_enable){
 		ts->accuracy_filter.ignore_pressure_gap = 5;
-		ts->accuracy_filter.delta_max = 50;
-		ts->accuracy_filter.max_pressure = 55;
-		ts->accuracy_filter.time_to_max_pressure = 1;
-		ts->accuracy_filter.direction_count = 8;
-		ts->accuracy_filter.touch_max_count = 4;
+		ts->accuracy_filter.delta_max = 30;
+		ts->accuracy_filter.max_pressure = 255;
+		ts->accuracy_filter.time_to_max_pressure = one_sec / 20;
+		ts->accuracy_filter.direction_count = one_sec / 6;
+		ts->accuracy_filter.touch_max_count = one_sec / 2;
 	}
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)

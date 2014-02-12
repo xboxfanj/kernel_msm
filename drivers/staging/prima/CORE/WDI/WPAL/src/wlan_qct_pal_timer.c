@@ -60,6 +60,8 @@
 #include "wlan_qct_os_status.h"
 #include "vos_threads.h"
 
+#include <linux/delay.h>
+
 /*---------------------------------------------------------------------------
  \brief wpalTimerCback - VOS timer callback function
 

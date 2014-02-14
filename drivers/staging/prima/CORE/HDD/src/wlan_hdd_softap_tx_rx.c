@@ -186,7 +186,6 @@ static VOS_STATUS hdd_softap_flush_tx_queues( hdd_adapter_t *pAdapter )
          pAdapter->aStaInfo[STAId].txSuspended[i] = VOS_FALSE;
          spin_unlock_bh(&pAdapter->aStaInfo[STAId].wmm_tx_queue[i].lock);
       }
-      pAdapter->aStaInfo[STAId].vosLowResource = VOS_FALSE;
    }
 
    spin_unlock_bh( &pAdapter->staInfo_lock );
@@ -310,22 +309,6 @@ int hdd_softap_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
        netif_stop_subqueue(dev, skb_get_queue_mapping(skb));
        txSuspended = VOS_TRUE;
     }
-
-    /* If 3/4th of the max queue size is used then enable the flag.
-     * This flag indicates to place the DHCP packets in VOICE AC queue.*/
-   if (WLANTL_AC_BE == ac)
-   {
-      if (pAdapter->aStaInfo[STAId].wmm_tx_queue[ac].count >= HDD_TX_QUEUE_LOW_WATER_MARK)
-      {
-          VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
-                     "%s: TX queue for Best Effort AC is 3/4th full", __func__);
-          pAdapter->aStaInfo[STAId].vosLowResource = VOS_TRUE;
-      }
-      else
-      {
-          pAdapter->aStaInfo[STAId].vosLowResource = VOS_FALSE;
-      }
-   }
    spin_unlock(&pAdapter->aStaInfo[STAId].wmm_tx_queue[ac].lock);
 
    if (VOS_TRUE == txSuspended)
@@ -581,7 +564,6 @@ VOS_STATUS hdd_softap_init_tx_rx( hdd_adapter_t *pAdapter )
    hdd_context_t *pHddCtx = NULL;
 
    pAdapter->isVosOutOfResource = VOS_FALSE;
-   pAdapter->isVosLowResource = VOS_FALSE;
 
    vos_mem_zero(&pAdapter->stats, sizeof(struct net_device_stats));
 
@@ -607,6 +589,10 @@ VOS_STATUS hdd_softap_init_tx_rx( hdd_adapter_t *pAdapter )
       }
    }
 
+   /* Update the AC weights suitable for SoftAP mode of operation */
+   WLANTL_SetACWeights((WLAN_HDD_GET_CTX(pAdapter))->pvosContext, pACWeights);
+
+   /* Initialize SAP/P2P-GO traffin monitor */
    pHddCtx = (hdd_context_t *)pAdapter->pHddCtx;
    if (NULL == pHddCtx)
    {
@@ -614,11 +600,6 @@ VOS_STATUS hdd_softap_init_tx_rx( hdd_adapter_t *pAdapter )
                  "%s: Invalid HDD cntxt", __func__ );
       return VOS_STATUS_E_INVAL;
    }
-
-   /* Update the AC weights suitable for SoftAP mode of operation */
-   WLANTL_SetACWeights((WLAN_HDD_GET_CTX(pAdapter))->pvosContext, pACWeights);
-
-   /* Initialize SAP/P2P-GO traffin monitor */
    if ((pHddCtx->cfg_ini->enableTrafficMonitor) &&
        (!pHddCtx->traffic_monitor.isInitialized))
    {
@@ -1725,19 +1706,3 @@ VOS_STATUS hdd_softap_GetStaId(hdd_adapter_t *pAdapter, v_MACADDR_t *pMacAddress
     return VOS_STATUS_E_FAILURE;
 }
 
-VOS_STATUS hdd_softap_GetConnectedStaId(hdd_adapter_t *pAdapter, v_U8_t *staId)
-{
-    v_U8_t i;
-
-    for (i = 0; i < WLAN_MAX_STA_COUNT; i++)
-    {
-        if (pAdapter->aStaInfo[i].isUsed &&
-            (!vos_is_macaddr_broadcast(&pAdapter->aStaInfo[i].macAddrSTA)))
-        {
-            *staId = i;
-            return VOS_STATUS_SUCCESS;
-        }
-    }
-
-    return VOS_STATUS_E_FAILURE;
-}

@@ -3913,6 +3913,7 @@ static void touch_early_suspend(struct early_suspend *h)
 	}
 
 
+
 	
 
 #ifdef CUST_G_TOUCH

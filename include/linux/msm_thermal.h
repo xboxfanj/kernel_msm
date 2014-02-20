@@ -32,16 +32,8 @@ struct msm_thermal_data {
 	uint32_t allowed_low_high;
 	uint32_t allowed_low_low;
 	uint32_t allowed_low_freq;
-#ifdef CONFIG_INTELLI_THERMAL
-	uint32_t limit_temp_degC;
-	uint32_t temp_hysteresis_degC;
-	uint32_t freq_step;
-	uint32_t freq_control_mask;
-	int32_t core_limit_temp_degC;
-	int32_t core_temp_hysteresis_degC;
-	uint32_t core_control_mask;
-#endif
 };
+
 struct msm_thermal_stat {
     cputime64_t time_low_start;
     cputime64_t time_mid_start;
@@ -50,7 +42,8 @@ struct msm_thermal_stat {
     cputime64_t time_mid;
     cputime64_t time_max;
 };
-#if defined(CONFIG_THERMAL_MONITOR) || defined(CONFIG_INTELLI_THERMAL)
+
+#ifdef CONFIG_THERMAL_MONITOR
 extern int msm_thermal_init(struct msm_thermal_data *pdata);
 extern int msm_thermal_device_init(void);
 #else
@@ -63,4 +56,5 @@ static inline int msm_thermal_device_init(void)
 	return -ENOSYS;
 }
 #endif
-#endif
+
+#endif /*__MSM_THERMAL_H*/

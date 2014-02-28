@@ -96,3 +96,8 @@ config MSM_KGSL_DISABLE_SHADOW_WRITES
 	bool "Disable register shadow writes for context switches"
 	default n
 	depends on MSM_KGSL
+
+config MSM_KGSL_KCONTROL
+	tristate "Kcontrol GPU module for msm devices by showp1984"
+	default m
+	depends on MSM_KGSL

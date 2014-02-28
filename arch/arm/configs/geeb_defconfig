@@ -2879,7 +2879,7 @@ CONFIG_LEDS_CLASS=y
 #
 # LED drivers
 #
-# CONFIG_LEDS_LM3530 is not set
+CONFIG_LEDS_LM3530=y
 # CONFIG_LEDS_PCA9532 is not set
 # CONFIG_LEDS_GPIO is not set
 # CONFIG_LEDS_MSM_PDM is not set

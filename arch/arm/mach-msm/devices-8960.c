@@ -3293,6 +3293,12 @@ static struct kgsl_device_iommu_data kgsl_3d0_iommu_data[] = {
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwrlevel = {
 		{
+                        .gpu_freq = 533333000,
+                        .bus_freq = 6,
+                        .io_fraction = 0,
+                },
+
+		{
 			.gpu_freq = 487500000,
 			.bus_freq = 5,
 			.io_fraction = 0,
@@ -3323,7 +3329,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 		},
 	},
 	.init_level = 1,
-	.num_levels = 5, //ARRAY_SIZE(grp3d_freq) + 1,
+	.num_levels = 6, //ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/12,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,

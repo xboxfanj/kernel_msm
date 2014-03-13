@@ -1,5 +1,4 @@
 /* Copyright (c) 2012, The Linux Foundation. All rights reserved.
- * Copyright (c) 2012, LGE Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,7 +20,7 @@
 #include <mach/socinfo.h>
 
 #include "devices.h"
-#include "board-mako.h"
+#include "board-flo.h"
 
 #ifdef CONFIG_MSM_DCVS
 static struct msm_dcvs_freq_entry grp3d_freq[] = {
@@ -188,7 +187,7 @@ static struct resource kgsl_3d0_resources[] = {
 	},
 	{
 		.name = KGSL_3D0_SHADER_MEMORY,
-		.start = 0x04310000,
+		.start = 0x04310000, /* Shader Mem Address */
 		.end = 0x0431ffff,
 		.flags = IORESOURCE_MEM,
 	},

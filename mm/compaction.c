@@ -789,7 +789,7 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static struct work_struct compactnodes_w;
-static int compact_nodes(void);
+static void compact_nodes(void);
 static void compactnodes_work(struct work_struct *w)
 {
 	/* No point in being gun shy here since compact_zone()

@@ -609,7 +609,6 @@ EXPORT_SYMBOL(kgsl_check_timestamp);
 static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 {
 	int status = -EINVAL;
-	struct kgsl_pwrscale_policy *policy_saved;
 
 	if (!device)
 		return -EINVAL;
@@ -617,8 +616,6 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 	KGSL_PWR_WARN(device, "suspend start\n");
 
 	mutex_lock(&device->mutex);
-	policy_saved = device->pwrscale.policy;
-	device->pwrscale.policy = NULL;
 	kgsl_pwrctrl_request_state(device, KGSL_STATE_SUSPEND);
 
 	/* Tell the device to drain the submission queue */
@@ -645,6 +642,7 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 		case KGSL_STATE_SLEEP:
 			/* make sure power is on to stop the device */
 			kgsl_pwrctrl_enable(device);
+			kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
 			/* Get the completion ready to be waited upon. */
 			INIT_COMPLETION(device->hwaccess_gate);
 			device->ftbl->suspend_context(device);
@@ -663,7 +661,7 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 			goto end;
 	}
 	kgsl_pwrctrl_request_state(device, KGSL_STATE_NONE);
-	device->pwrscale.policy = policy_saved;
+	kgsl_pwrscale_sleep(device);
 	status = 0;
 
 end:
@@ -2948,7 +2946,7 @@ kgsl_ioctl_gpumem_sync_cache_bulk(struct kgsl_device_private *dev_priv,
 	bool full_flush = false;
 
 	if (param->id_list == NULL || param->count == 0
-			|| param->count > (UINT_MAX/sizeof(unsigned int)))
+			|| param->count > (PAGE_SIZE / sizeof(unsigned int)))
 		return -EINVAL;
 
 	id_list = kzalloc(param->count * sizeof(unsigned int), GFP_KERNEL);
@@ -3645,7 +3643,7 @@ err_put:
 static inline bool
 mmap_range_valid(unsigned long addr, unsigned long len)
 {
-	return (addr + len) > addr && (addr + len) < TASK_SIZE;
+	return ((ULONG_MAX - addr) > len) && ((addr + len) < TASK_SIZE);
 }
 
 static unsigned long

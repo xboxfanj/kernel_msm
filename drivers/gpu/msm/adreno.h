@@ -50,14 +50,6 @@
 #define KGSL_NOP_IB_IDENTIFIER	        0x20F20F20
 #define KGSL_PWRON_FIXUP_IDENTIFIER	0x2AFAFAFA
 
-#ifdef CONFIG_MSM_SCM
-#define ADRENO_DEFAULT_PWRSCALE_POLICY  (&kgsl_pwrscale_policy_tz)
-#elif defined CONFIG_MSM_SLEEP_STATS_DEVICE
-#define ADRENO_DEFAULT_PWRSCALE_POLICY  (&kgsl_pwrscale_policy_idlestats)
-#else
-#define ADRENO_DEFAULT_PWRSCALE_POLICY  NULL
-#endif
-
 #define ADRENO_ISTORE_START 0x5000 /* Istore offset */
 
 #define ADRENO_NUM_CTX_SWITCH_ALLOWED_BEFORE_DRAW	50
@@ -185,8 +177,6 @@ struct adreno_device {
 	struct adreno_dispatcher dispatcher;
 	struct kgsl_memdesc pwron_fixup;
 	unsigned int pwron_fixup_dwords;
-
-	struct work_struct input_work;
 };
 
 /**
@@ -514,8 +504,6 @@ int adreno_perfcounter_put(struct adreno_device *adreno_dev,
 	unsigned int groupid, unsigned int countable, unsigned int flags);
 
 int adreno_soft_reset(struct kgsl_device *device);
-
-int adreno_a3xx_pwron_fixup_init(struct adreno_device *adreno_dev);
 
 static inline int adreno_is_a200(struct adreno_device *adreno_dev)
 {

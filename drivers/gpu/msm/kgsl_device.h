@@ -62,8 +62,6 @@
 #define KGSL_EVENT_TIMESTAMP_RETIRED 0
 #define KGSL_EVENT_CANCELLED 1
 
-#define KGSL_FLAG_WAKE_ON_TOUCH BIT(0)
-
 /*
  * "list" of event types for ftrace symbolic magic
  */
@@ -302,7 +300,6 @@ struct kgsl_device {
 	struct list_head events;
 	struct list_head events_pending_list;
 	unsigned int events_last_timestamp;
-	s64 on_time;
 
 	/* Postmortem Control switches */
 	int pm_regs_enabled;
@@ -427,11 +424,6 @@ enum kgsl_process_priv_flags {
 struct kgsl_device_private {
 	struct kgsl_device *device;
 	struct kgsl_process_private *process_priv;
-};
-
-struct kgsl_power_stats {
-	s64 total_time;
-	s64 busy_time;
 };
 
 struct kgsl_device *kgsl_get_device(int dev_idx);
@@ -758,4 +750,23 @@ static inline void kgsl_trace_gpu_sched_switch(const char *name,
 
 #endif
 
+/**
+ * kgsl_sysfs_store() - parse a string from a sysfs store function
+ * @buf: Incoming string to parse
+ * @ptr: Pointer to an unsigned int to store the value
+ */
+static inline int kgsl_sysfs_store(const char *buf, unsigned int *ptr)
+{
+	unsigned int val;
+	int rc;
+
+	rc = kstrtou32(buf, 0, &val);
+	if (rc)
+		return rc;
+
+	if (ptr)
+		*ptr = val;
+
+	return 0;
+}
 #endif  /* __KGSL_DEVICE_H */

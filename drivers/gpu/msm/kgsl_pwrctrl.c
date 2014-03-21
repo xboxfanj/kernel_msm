@@ -44,6 +44,8 @@
 #define INIT_UDELAY		200
 #define MAX_UDELAY		2000
 
+unsigned long internal_max = 450000000;
+
 struct clk_pair {
 	const char *name;
 	uint map;
@@ -380,6 +382,9 @@ static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 	return -ERANGE;
 }
 
+extern void SetGPUpll_config(u32 loc, unsigned long freq);
+extern void SetMAXGPUFreq(unsigned long freq);
+
 static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
@@ -397,6 +402,34 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	ret = kgsl_sysfs_store(buf, &val);
 	if (ret)
 		return ret;
+
+
+	if (val == 400000000)
+	{
+		SetGPUpll_config(0x1D, val);
+	}
+	else if (val == 450000000)
+	{
+		SetGPUpll_config(0x21, val);
+	}
+	else if (val == 504000000)
+	{
+		SetGPUpll_config(0x25, val);
+	}
+	else if (val == 545000000)
+	{
+		SetGPUpll_config(0x28, val);
+	}
+	else if (val == 600000000)
+	{
+		SetGPUpll_config(0x2C, val);
+	}
+	else if (val == 627000000)
+	{
+		SetGPUpll_config(0x2E, val);
+	}
+
+	internal_max = val;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -428,8 +461,8 @@ static int kgsl_pwrctrl_max_gpuclk_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-			pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq);
+	return snprintf(buf, PAGE_SIZE, "%ld\n",
+			internal_max);
 }
 
 static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
@@ -468,7 +501,11 @@ static int kgsl_pwrctrl_gpuclk_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
+	if (pwr->active_pwrlevel != 0)
 	return snprintf(buf, PAGE_SIZE, "%ld\n", kgsl_pwrctrl_active_freq(pwr));
+	else
+		return snprintf(buf, PAGE_SIZE, "%ld\n",
+			internal_max);
 }
 
 static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
@@ -608,8 +645,17 @@ static int kgsl_pwrctrl_gpu_available_frequencies_show(
 		return 0;
 	pwr = &device->pwrctrl;
 	for (index = 0; index < pwr->num_pwrlevels - 1; index++)
-		num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",
-		pwr->pwrlevels[index].gpu_freq);
+		if (index == 0)
+		{
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",627000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",600000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",545000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",504000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",450000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",400000000);
+		}
+		else
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",pwr->pwrlevels[index].gpu_freq);
 	buf[num_chars++] = '\n';
 	return num_chars;
 }

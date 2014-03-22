@@ -1099,8 +1099,6 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		return;
 	}
 
-	if (throttled_bin > 0)
-		return; 
 
 	for_each_online_cpu(i)
 		queue_work_on(i, dbs_wq, &per_cpu(dbs_refresh_work, i).work);

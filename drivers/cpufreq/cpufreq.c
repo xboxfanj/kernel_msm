@@ -532,6 +532,8 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 		curr_policy->user_policy.policy = curr_policy->policy;
 		curr_policy->user_policy.governor = curr_policy->governor;
 
+		sysfs_notify(&curr_policy->kobj, NULL, "scaling_governor");
+
 		if (!ret)
 			pr_info("store_scaling_governor setting governor %s on cpu %d ok\n", str_governor, cpu);
 
@@ -1315,10 +1317,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		cp = per_cpu(cpufreq_cpu_data, sibling);
 		if (cp && cp->governor) {
 			policy->governor = cp->governor;
-			policy->min = cp->min;
-			policy->max = cp->max;
-			policy->user_policy.min = cp->user_policy.min;
-			policy->user_policy.max = cp->user_policy.max;
 
 			found = 1;
 			//pr_info("sibling: found sibling!\n");
@@ -1347,7 +1345,7 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	policy->user_policy.max = policy->max;
 
 	if (found) {
-		/* Calling the driver can overwrite policy frequencies again */
+		/* Calling the driver can overwrite policy frequencies */
 		policy->min = cp->min;
 		policy->max = cp->max;
 		policy->user_policy.min = cp->user_policy.min;

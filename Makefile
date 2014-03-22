@@ -357,7 +357,7 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 ifdef CONFIG_CC_OPTIMIZE_ALOT
-MODFLAGS	= -DMODULE -O2 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -fno-pic -marm -mfpu=neon-vfpv4 -ftree-vectorize -mvectorize-with-neon-quad
+MODFLAGS	= -DMODULE -O2 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -fno-pic -marm -mfpu=neon-vfpv4 -ftree-vectorize -mvectorize-with-neon-quad -fgraphite-identity -floop-parallelize-all -floop-interchange -floop-strip-mine -floop-block
 else
 MODFLAGS	= -DMODULE -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a8 -fno-pic -marm -mfpu=neon -ftree-vectorize -mvectorize-with-neon-quad
 endif
@@ -366,8 +366,8 @@ CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds
 ifdef CONFIG_CC_OPTIMIZE_ALOT
-CFLAGS_KERNEL	= -O3 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -funswitch-loops -mvectorize-with-neon-quad
-AFLAGS_KERNEL	= -O3 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -funswitch-loops -mvectorize-with-neon-quad
+CFLAGS_KERNEL	= -O3 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -funswitch-loops -mvectorize-with-neon-quad -fgraphite-identity -floop-parallelize-all -floop-interchange -floop-strip-mine -floop-block
+AFLAGS_KERNEL	= -O3 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -funswitch-loops -mvectorize-with-neon-quad -fgraphite-identity -floop-parallelize-all -floop-interchange -floop-strip-mine -floop-block
 else
 CFLAGS_KERNEL	= -O2 -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -funswitch-loops -mvectorize-with-neon-quad
 AFLAGS_KERNEL	= 
